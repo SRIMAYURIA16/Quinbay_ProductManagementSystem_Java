@@ -18,24 +18,29 @@ public class ProductManagement {
         collection = database.getCollection(COLLECTION_NAME);
     }
 
-    public void addProduct(String productName, double productPrice, int stocksAvailable, Product.Category category) {
-        int productId = lastProductId() + 1;
-        String productCode = "PROD" + productId;
-        Product product = new Product(productId, productCode, productName, productPrice, stocksAvailable, false, category);
+    public void addProduct(String productName, double productPrice, int stocksAvailable,String productCategory) {
+        MongoCollection<Document> categoryDocument= database.getCollection("Category");
+        Document findCategory=categoryDocument.find(Filters.eq("categoryName",productCategory)).first();
+        if(findCategory!=null) {
+            int productId = lastProductId() + 1;
+            String productCode = "PROD" + productId;
+            Product product = new Product(productId, productCode, productName, productPrice, stocksAvailable, false);
 
-        Document categoryDocument = new Document("id", category.getId())
-                .append("name", category.getName());
-        Document productDocument = new Document("productId", product.getProductId())
-                .append("productCode", product.getProductCode())
-                .append("productName", product.getProductName())
-                .append("productPrice", product.getProductPrice())
-                .append("stocksAvail", product.getStocksAvail())
-                .append("deletionStatus", product.isDeleted())
-                .append("category", categoryDocument);
+            Document productDocument = new Document("productId", product.getProductId())
+                    .append("productCode", product.getProductCode())
+                    .append("productName", product.getProductName())
+                    .append("productPrice", product.getProductPrice())
+                    .append("stocksAvail", product.getStocksAvail())
+                    .append("deletionStatus", product.isDeleted())
+                    .append("CategoryName",productCategory);
 
-        collection.insertOne(productDocument);
-        System.out.println("Product added successfully!!!");
-        System.out.println("===============================");
+            collection.insertOne(productDocument);
+            System.out.println("Product added successfully!!!");
+            System.out.println("===============================");
+        }
+        else{
+            System.out.println("Category is not existed .. Try later!!!");
+        }
     }
 
     public int lastProductId() {
@@ -56,7 +61,8 @@ public class ProductManagement {
         FindIterable<Document> products = collection.find();
         if (products.first() == null) {
             System.out.println("No products available at the moment. Please check again later.");
-        } else {
+        }
+        else {
             System.out.println("==== Available Products ====");
             for (Document product : products) {
                 printProduct(product);
@@ -72,14 +78,6 @@ public class ProductManagement {
         System.out.println("Product Price: " + product.getDouble("productPrice"));
         System.out.println("Available Stocks: " + product.getInteger("stocksAvail"));
         System.out.println("Deletion Status: " + product.getBoolean("deletionStatus"));
-
-        Document categoryDocument = product.get("category", Document.class);
-        if (categoryDocument != null) {
-            System.out.println("Category Id: " + categoryDocument.getInteger("id"));
-            System.out.println("Category Name: " + categoryDocument.getString("name"));
-        } else {
-            System.out.println("Category: null");
-        }
     }
 
     public void updateStocks(int productIdToUpdate, int updatedStocks) {

@@ -33,18 +33,17 @@ public class PurchaseProduct {
 //        purchaseList.add(purchase);
 //    }
 
-    private void savePurchasesToPostgreSQL(List<PurchaseEntity> purchases) {
+    private void savePurchasesToPostgreSQL(Map<Integer,PurchaseEntity> purchaseList) {
         try (Connection connection = DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD)) {
-          connection.setAutoCommit(false);
-            int totalProducts = 0;
+            connection.setAutoCommit(false);
+            int totalProducts = purchaseList.size();
             double totalAmount = 0;
-            for (PurchaseEntity purchase : purchases) {
-                totalProducts += purchase.getPurchasedStocks();
-                totalAmount += purchase.getPurchasedAmount();
+            for (PurchaseEntity purchase: purchaseList.values()){
+                totalAmount+=purchase.getPurchasedAmount();
             }
             String insertOrderSql = "INSERT INTO orders (purchase_code, purchase_date, total_products, total_amount) VALUES (?, NOW(), ?, ?) RETURNING purchase_id";
             int purchaseId = -1;
-            String purchaseCode = purchases.get(0).getPurchaseCode();
+            String purchaseCode = purchaseList.values().iterator().next().getPurchaseCode();
             try (PreparedStatement insertOrderStatement = connection.prepareStatement(insertOrderSql)) {
                 insertOrderStatement.setString(1, purchaseCode);
                 insertOrderStatement.setInt(2, totalProducts);
@@ -58,30 +57,31 @@ public class PurchaseProduct {
             if (purchaseId != -1) {
                 String insertDetailSql = "INSERT INTO order_details (purchase_id, product_name, quantity, price) VALUES (?, ?, ?, ?)";
                 try (PreparedStatement insertDetailStatement = connection.prepareStatement(insertDetailSql)) {
-                    for (PurchaseEntity purchase : purchases) {
-                        insertDetailStatement.setInt(1, purchaseId);
-                        insertDetailStatement.setString(2, purchase.getProductName());
-                        insertDetailStatement.setInt(3, purchase.getPurchasedStocks());
-                        insertDetailStatement.setDouble(4, purchase.getActualAmount());
+                    for (PurchaseEntity purchase:purchaseList.values()){
+                        insertDetailStatement.setInt(1,purchaseId);
+                        insertDetailStatement.setString(2,purchase.getProductName());
+                        insertDetailStatement.setInt(3,purchase.getPurchasedStocks());
+                        insertDetailStatement.setDouble(4,purchase.getActualAmount());
                         insertDetailStatement.addBatch();
                     }
                     insertDetailStatement.executeBatch();
                 }
                 connection.commit();
-                updateMongoDBStocks(purchases);
+                updateMongoDBStocks(purchaseList);
                 System.out.println("Purchase completed successfully.");
-            }
-            else {
+            } else {
                 connection.rollback();
                 System.out.println("Failed to insert order");
             }
         } catch (SQLException e) {
             System.out.println("Error saving purchase to PostgreSQL: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
-    private void updateMongoDBStocks(List<PurchaseEntity> purchases) {
-        for (PurchaseEntity purchase : purchases) {
+
+    private void updateMongoDBStocks(Map<Integer,PurchaseEntity> purchases) {
+        for (PurchaseEntity purchase : purchases.values()) {
             productCollection.updateOne(
                     Filters.eq("productName", purchase.getProductName()),
                     Updates.inc("stocksAvail", -purchase.getPurchasedStocks())
@@ -89,38 +89,33 @@ public class PurchaseProduct {
         }
     }
 
-    public int getNextPurchaseId() {
-        return purchaseList.isEmpty() ? 1 : purchaseList.get(purchaseList.size() - 1).getPurchaseID() + 1;
-    }
-
     public void displayPurchaseHistory() {
         try (Connection connection = DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD)) {
             String query = "SELECT orders.purchase_id, orders.purchase_code, orders.purchase_date, orders.total_products, orders.total_amount, " +
                     "order_details.product_name, order_details.quantity, order_details.price " +
-                    "FROM orders " +
-                    "JOIN order_details ON orders.purchase_id = order_details.purchase_id";
+                    "FROM orders JOIN order_details ON orders.purchase_id = order_details.purchase_id";
             try (Statement stmt = connection.createStatement()) {
                 Map<Integer, Purchase> purchaseMap = new HashMap<>();
 
                 ResultSet rs = stmt.executeQuery(query);
-                    while (rs.next()) {
-                        int purchaseId = rs.getInt("purchase_id");
-                        String purchaseCode = rs.getString("purchase_code");
-                        Timestamp purchaseDate = rs.getTimestamp("purchase_date");
-                        int totalProducts = rs.getInt("total_products");
-                        double totalAmount = rs.getDouble("total_amount");
+                while (rs.next()) {
+                    int purchaseId = rs.getInt("purchase_id");
+                    String purchaseCode = rs.getString("purchase_code");
+                    Timestamp purchaseDate = rs.getTimestamp("purchase_date");
+                    int totalProducts = rs.getInt("total_products");
+                    double totalAmount = rs.getDouble("total_amount");
+                    String productName = rs.getString("product_name");
+                    int quantity = rs.getInt("quantity");
+                    double price = rs.getDouble("price");
 
-                        String productName = rs.getString("product_name");
-                        int quantity = rs.getInt("quantity");
-                        double price = rs.getDouble("price");
+                    Purchase purchase = purchaseMap.getOrDefault(purchaseId, new Purchase(purchaseId, purchaseCode, purchaseDate, totalProducts, totalAmount));
+                    purchase.addProduct(new ProductDetail(productName, quantity, price));
 
-                        Purchase purchase = purchaseMap.getOrDefault(purchaseId, new Purchase(purchaseId, purchaseCode, purchaseDate, totalProducts, totalAmount));
-                        purchase.addProduct(new ProductDetail(productName, quantity, price));
-
-                        purchaseMap.put(purchaseId, purchase);
-                    }
+                    purchaseMap.put(purchaseId, purchase);
+                }
 
                 for (Purchase purchase : purchaseMap.values()) {
+
                     System.out.println("Purchase ID: " + purchase.getPurchaseId());
                     System.out.println("Purchase Code: " + purchase.getPurchaseCode());
                     System.out.println("Purchase Date: " + purchase.getPurchaseDate());
@@ -137,14 +132,13 @@ public class PurchaseProduct {
             }
         } catch (SQLException e) {
             System.out.println("Error displaying purchase history: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     public void purchaseProductFromMongoDB(Scanner sc) {
-        List<PurchaseEntity> tempPurchaseList = new ArrayList<>();
-        int purchaseId = getNextPurchaseId();
-
-        String purchaseCode = "PUR" +new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        Map<Integer,PurchaseEntity> purchaseList=new HashMap<>();
+        String purchaseCode = "PUR" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         Map<Integer,Integer> tempStocks=new HashMap<>();
         while (true) {
             System.out.println("Enter Product ID:");
@@ -154,20 +148,26 @@ public class PurchaseProduct {
             sc.nextLine();
 
             Document productDocument = productCollection.find(Filters.eq("productId", productId)).first();
-            if(productDocument!=null ) tempStocks.put(productId, productDocument.getInteger("stocksAvail"));
+
             if (productDocument != null && !productDocument.getBoolean("deletionStatus")) {
 
                 int availableStocks = productDocument.getInteger("stocksAvail");
-                System.out.println("Avail: "+tempStocks.get(productId));
-                if (availableStocks >= purchasingStocks && tempStocks.get(productId)>purchasingStocks) {
-                    tempStocks.put(productId, tempStocks.getOrDefault(productId,0) - purchasingStocks);
+                int stocks=availableStocks-tempStocks.getOrDefault(productDocument.getInteger("productId"),0);
+                if (availableStocks >= purchasingStocks && stocks>=purchasingStocks) {
+                    tempStocks.put(productDocument.getInteger("productId"),purchasingStocks);
                     String productName = productDocument.getString("productName");
                     double productPrice = productDocument.getDouble("productPrice");
 
                     double totalAmount = productPrice * purchasingStocks;
-
-                    PurchaseEntity purchaseEntity = new PurchaseEntity(purchaseId, purchaseCode, productName, purchasingStocks, productPrice, totalAmount);
-                    tempPurchaseList.add(purchaseEntity);
+                    PurchaseEntity purchaseEntity = new PurchaseEntity(purchaseCode, productName, purchasingStocks, productPrice, totalAmount);
+                    if(purchaseList.containsKey(productDocument.getInteger("productId"))){
+                        PurchaseEntity temp=purchaseList.get(productDocument.getInteger("productId"));
+                        temp.setPurchasedStocks(temp.getPurchasedStocks()+purchasingStocks);
+                        temp.setPurchasedAmount(temp.getPurchasedAmount()+productPrice);
+                    }
+                    else{
+                        purchaseList.put(productDocument.getInteger("productId"),purchaseEntity);
+                    }
 
                     System.out.println("Do you want to add more products? (yes/no)");
                     String response = sc.nextLine().trim().toLowerCase();
@@ -175,26 +175,22 @@ public class PurchaseProduct {
                         System.out.println("Confirm order? (yes/no)");
                         String confirmResponse = sc.nextLine().trim().toLowerCase();
                         if (confirmResponse.equals("yes")) {
-
-                            executorService.submit(() -> savePurchasesToPostgreSQL(tempPurchaseList));
+                            executorService.submit(() -> savePurchasesToPostgreSQL(purchaseList));
                             break;
                         } else {
                             System.out.println("Order cancelled.");
                             break;
                         }
                     }
+                } else {
+                    System.out.println("Insufficient stocks available. Available stocks: " + stocks);
                 }
-
-                else {
-                    System.out.println("Insufficient stocks available. Available stocks: " + availableStocks);
-                }
-            }
-            else {
+            } else {
                 System.out.println("Product ID " + productId + " not found or deleted.");
             }
         }
-
     }
+
 
     class Purchase {
         private int purchaseId;
