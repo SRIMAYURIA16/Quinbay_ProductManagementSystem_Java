@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: inventory_api_gateway
+  cloud:
+    gateway:
+      routes:
+        - id: category-service-route
+          uri: lb://InventoryManagement
+          predicates:
+            - Path=/category/**
+        - id: product-service-route
+          uri: lb://InventoryManagement
+          predicates:
+            - Path=/product/**
+        - id: history-service-route
+          uri: lb://InventoryManagement
+          predicates:
+            - Path=/history/**
+        - id: seller-service-route
+          uri: lb://InventoryManagement
+          predicates:
+            - Path=/seller/**
+
+server:
+  port: 8085
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+    prefer-ip-address: true
