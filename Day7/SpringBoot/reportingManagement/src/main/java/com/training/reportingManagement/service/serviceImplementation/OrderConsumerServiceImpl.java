@@ -38,10 +38,8 @@ public class OrderConsumerServiceImpl implements OrderConsumerService {
     public void consumerOrder(Order order) {
         Order_Details orderDetails = orderDetailsService.addOrder(order);
         orderItemsService.addOrder(order, orderDetails);
-
         System.out.println("Received order: " + order);
         saveOrderToExcel(order);
-
         String emailSubject = "Order Confirmation - Order ID: " + order.getId();
         String emailBody = "Dear Customer,\n\nThank you for your order.\n\nOrder ID: " + order.getId() +
                 "\nTotal Quantity: " + order.getTotalProducts() +
@@ -56,7 +54,6 @@ public class OrderConsumerServiceImpl implements OrderConsumerService {
         Sheet sheet = null;
         FileInputStream fis = null;
         FileOutputStream fos = null;
-
         try {
             File file = new File(filePath);
 
@@ -81,7 +78,6 @@ public class OrderConsumerServiceImpl implements OrderConsumerService {
                 Cell headerCell5 = headerRow.createCell(4);
                 headerCell5.setCellValue("Ordered On");
             }
-
             int rowCount = sheet.getLastRowNum();
             Row row = sheet.createRow(++rowCount);
             row.createCell(0).setCellValue(order.getId());
