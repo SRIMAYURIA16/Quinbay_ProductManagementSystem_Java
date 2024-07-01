@@ -21,9 +21,6 @@ public class OrderDetailsServiceImpl implements OrderDetailsService {
     @Autowired
     private OrderDetailsRepository orderDetailsRepository;
 
-    @Autowired
-    private JavaMailSender javaMailSender;
-
     @Override
     public Order_Details addOrder(Order order) {
         Order_Details orderDetails = new Order_Details();
@@ -32,7 +29,6 @@ public class OrderDetailsServiceImpl implements OrderDetailsService {
         orderDetails.setTotalProducts(order.getProductList().size());
         orderDetails.setCreatedDate(LocalDate.now());
         orderDetailsRepository.save(orderDetails);
-        sendConfirmationEmail(order.getUserId());
         return orderDetails;
     }
 
@@ -80,18 +76,5 @@ public class OrderDetailsServiceImpl implements OrderDetailsService {
         summary.setOrderDetailsList(orderDetailsList);
 
         return summary;
-    }
-
-    private void sendConfirmationEmail(String email) {
-        SimpleMailMessage msg = new SimpleMailMessage();
-        msg.setTo(email);
-        msg.setSubject("Order Confirmation");
-        msg.setText("Dear Customer,\n\nYour order has been successfully placed.\n\nThank you for shopping with us!");
-
-        try {
-            javaMailSender.send(msg);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 }
