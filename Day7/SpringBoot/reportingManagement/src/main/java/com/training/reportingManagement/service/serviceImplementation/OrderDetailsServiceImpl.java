@@ -91,7 +91,6 @@ public class OrderDetailsServiceImpl implements OrderDetailsService {
         try {
             javaMailSender.send(msg);
         } catch (Exception e) {
-            // Handle exception (e.g., log error)
             e.printStackTrace();
         }
     }
