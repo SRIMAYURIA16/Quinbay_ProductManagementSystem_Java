@@ -1,0 +1,213 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body ,html{
+    height: 100%;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    width: 100%;
+    /* overflow-y: auto; */
+}
+
+header {
+    background-color: powderblue;
+    opacity: 0.8;
+    position: sticky;
+    height: 100px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 70px;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+}
+
+.search-bar {
+    display: flex;
+    align-items: center;
+    width: 50%;
+}
+
+.search-bar input {
+    flex-grow: 1;
+    padding: 10px 20px;
+    font-size: 15px;
+    border-radius: 25px;
+    border: 1px solid #ccc;
+    margin-right: 10px;
+}
+
+.search-bar button {
+    padding: 10px;
+    font-size: 15px;
+    background-color: cadetblue;
+    border: none;
+    cursor: pointer;
+    border-radius: 25px;
+}
+.product-box button:hover,article button:hover
+{
+    background-color: #28c1d8;    
+}
+.container {
+    padding: 20px;
+    display: flex;
+    overflow-y: auto;
+    height: calc(100% - 220px); 
+}
+
+article {
+    background-color: powderblue;
+    text-align: center;
+    border-radius: 8px;
+    width: 30%;
+    padding: 25px;
+    position: fixed; 
+    flex-shrink: 1;
+}
+
+fieldset {
+    padding: 10px;
+}
+
+legend {
+    font-size: 20px;
+    font-weight: bold;
+    margin:10px;
+}
+
+article input {
+    width: calc(100% - 25px);
+    padding: 8px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+article button {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    background-color: cadetblue;
+    /* border: none; */
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.products {
+    margin-left: 35%; 
+    width: 65%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    overflow-y: auto; 
+}
+
+.product-box {
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    padding: 10px;
+    width: calc(30% - 20px);
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.product-box img {
+    width: 70%;
+    height: auto;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.product-box p {
+    margin-bottom: 5px;
+}
+.product-box h6{
+    text-decoration: line-through;
+}
+.product-box button {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+    background-color: powderblue;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+footer {
+    width: 100%;
+    background-color: powderblue;
+    opacity: 0.8;
+    text-align: center;
+    padding: 5px;
+    height: 120px;
+    position: fixed;
+    bottom: 0;
+}
+
+.pagination {
+    display: flex;
+}
+
+.pagination a {
+    color: black;
+    padding: 8px 16px;
+    text-decoration: none;
+    cursor: pointer;
+}
+.logo{
+    height: 50%;
+    width: 50%px;
+    border-radius: 8px;
+    margin-right: 10px;
+}
+@media (max-width: 1100px) {
+    header {
+        padding: 0 20px;
+        font-size: 20px;
+    }
+    .search-bar {
+        width: 80%;
+    }
+    .container {
+        padding: 10px;
+        flex-direction: column;
+        overflow: scroll;
+        height: auto;
+    }
+
+    article {
+        width: 100%; 
+        padding: 20px; 
+        /* margin-bottom: 20px;  */
+        position: static;
+    }
+
+    .products {
+        margin-left: 0; 
+        width: 100%;
+        justify-content: center;
+        
+    }
+    .product-box {
+        width: calc(50% - 20px); 
+    }
+
+   footer{
+    position: static;
+   }
+}
